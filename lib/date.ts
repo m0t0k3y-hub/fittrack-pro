@@ -60,3 +60,16 @@ export function formatDateLabel(date: string): string {
   const wd = WEEKDAYS[new Date(`${date}T00:00:00Z`).getUTCDay()];
   return `${Number(date.slice(5, 7))}月${Number(date.slice(8, 10))}日（${wd}）`;
 }
+
+export function addDays(date: string, delta: number): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + delta);
+  return d.toISOString().slice(0, 10);
+}
+
+// 日数差 (to - from)
+export function diffDays(from: string, to: string): number {
+  return Math.round(
+    (new Date(`${to}T00:00:00Z`).getTime() - new Date(`${from}T00:00:00Z`).getTime()) / 86400000,
+  );
+}

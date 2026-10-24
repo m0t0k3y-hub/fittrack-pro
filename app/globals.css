@@ -3,6 +3,13 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* チャート: カテゴリ色は固定順 (slot 1=blue, 2=orange, 3=aqua) */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --chart-grid: #e8e7e3;
+  --chart-axis: #6b6a66;
 }
 
 @theme inline {
@@ -16,6 +23,12 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --chart-grid: #2a2a28;
+    --chart-axis: #a3a29a;
   }
 }
 
