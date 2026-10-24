@@ -24,6 +24,10 @@ npm run dev             # http://localhost:3000
   [supabase/templates/confirmation.html](supabase/templates/confirmation.html) で差し替えている。
   **本番の Supabase プロジェクトにも同じテンプレート（Authentication → Email Templates → Confirm signup）を設定すること。**
 
+## デプロイ
+
+Vercel + Supabase。手順は [docs/deploy.md](docs/deploy.md)。
+
 ## E2E テスト (Playwright)
 
 ```bash
