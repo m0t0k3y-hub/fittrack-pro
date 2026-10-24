@@ -20,9 +20,7 @@ npm run dev             # http://localhost:3000
 - DB スキーマは [supabase/migrations/](supabase/migrations/) で管理（テーブル、RLS、RPC、デフォルト種目）。
   `supabase db reset` で初期化できる。
 - 確認メールはローカルの Mailpit (http://127.0.0.1:54324) で受信できる。
-- 確認メールのリンクをアプリの `/auth/confirm` に向けるため、メールテンプレートを
-  [supabase/templates/confirmation.html](supabase/templates/confirmation.html) で差し替えている。
-  **本番の Supabase プロジェクトにも同じテンプレート（Authentication → Email Templates → Confirm signup）を設定すること。**
+- 確認メールのリンクは `/auth/confirm` に着地する（本番も同じ既定のテンプレート。詳細は [docs/deploy.md](docs/deploy.md)）。
 
 ## デプロイ
 

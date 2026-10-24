@@ -10,7 +10,8 @@ PostgreSQL の Row Level Security (RLS) で担保している。
 | [vercel.json](../vercel.json) | Vercel のリージョンを東京 (`hnd1`) に固定 |
 | [next.config.ts](../next.config.ts) | セキュリティヘッダー（nosniff / X-Frame-Options / Referrer-Policy / Permissions-Policy / HSTS） |
 | [supabase/migrations/](../supabase/migrations/) | テーブル・RLS・RPC・デフォルト種目 |
-| [supabase/templates/confirmation.html](../supabase/templates/confirmation.html) | 確認メールのテンプレート |
+| [supabase/config.toml](../supabase/config.toml) | ローカル設定。`[remotes.production]` に本番用の上書き（Site URL など） |
+| [supabase/templates/confirmation.html](../supabase/templates/confirmation.html) | 確認メールのテンプレート（**任意**。独自 SMTP の設定後に使える） |
 | [.github/workflows/ci.yml](../.github/workflows/ci.yml) | lint / ビルド / E2E |
 
 以下は、アカウントの操作が必要なので手動で行う。**順番どおりに進めること**（4 で本番のURLが決まらないと 3 の設定ができない）。
@@ -40,8 +41,9 @@ supabase db push                         # 適用
 
 - `supabase db push` は、デフォルト種目（`exercises` の seed）も含めて適用する。
 - マイグレーションは**前に進めるだけ**。適用済みのファイルは書き換えず、変更は新しいファイルで足す。
-- **`supabase config push` は使わない。** `supabase/config.toml` はローカル用の値（`site_url = http://localhost:3000` など）なので、
-  本番の設定を上書きしてしまう。Auth の設定は次の 3 でダッシュボードから行う。
+- Auth の設定は `supabase config push` で反映する（次の 3）。`supabase/config.toml` のローカル用の値（`site_url = http://localhost:3000` など）で
+  本番を上書きしないよう、**本番用の値は `[remotes.production]` に書いてある**。`project_id` が一致するときだけ適用される。
+  必ず先に `supabase config diff --project-ref <ref>` で差分を確認すること。
 
 適用後に RLS が全テーブルで有効なことを確認する（SQL Editor で実行。**0 行が正しい**）。
 
@@ -51,19 +53,38 @@ select tablename from pg_tables where schemaname = 'public' and not rowsecurity;
 
 ## 3. Supabase の Auth を設定する
 
-Authentication → ダッシュボードで設定する。
+`supabase/config.toml` の `[remotes.production]` に、本番の Site URL とリダイレクト URL を書いてある
+（`project_id` と URL は、自分のプロジェクトのものに書き換える）。反映:
+
+```bash
+supabase config diff --project-ref <ref>     # 差分の確認（読み取りのみ）
+supabase config push --project-ref <ref>     # 反映（差分が表示され、確認を求められる）
+```
+
+反映される項目:
 
 | 項目 | 値 |
 | --- | --- |
-| URL Configuration → **Site URL** | 本番の URL（例: `https://bodymenter.example.com`）。確認メールのリンクの基準になる |
-| URL Configuration → Redirect URLs | `https://<本番ドメイン>/**` |
-| Sign In / Providers → Email → **Confirm email** | 有効 |
-| Sign In / Providers → Email → Minimum password length | **8**（アプリの検証と合わせる） |
-| Emails → Templates → **Confirm signup** | [confirmation.html](../supabase/templates/confirmation.html) の内容を貼り付け、Subject を `メールアドレスの確認` にする |
+| Site URL | 本番の URL（例: `https://bodymenter.vercel.app`）。確認メールのリンクの基準になる |
+| Redirect URLs | `https://<本番ドメイン>/**` |
+| Minimum password length | **8**（アプリの検証と合わせる） |
+| Confirm email | 有効（新規プロジェクトの既定） |
 
-> **確認メールのテンプレートの差し替えは必須。** 既定のテンプレートのリンクは `/auth/confirm?token_hash=…` に向かないため、
-> 確認メールのリンクを開いても登録が完了しない。テンプレートのリンクは
-> `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email` になっている。
+`[remotes.production]` には、ローカル用の値で本番の設定を変えないよう、本番の現在値に揃えた項目
+（メールの再送間隔、OTP の桁数、MFA、プール設定など）も書いてある。`config diff` の結果が上の項目だけになっていることを確認する。
+
+### 確認メールのテンプレートについて
+
+**無料プラン＋既定のメール送信では、メールテンプレートを変更できない**（`config push` が 400 で失敗する）。
+そのため既定のテンプレートで動くようにしてある:
+
+1. 確認メールのリンクは Supabase の `/auth/v1/verify` を経由して、アプリの `/auth/confirm?code=…` に戻る。
+2. アプリが `code` をセッションに交換してログインする。
+
+制限: この方式は **登録したのと同じブラウザでリンクを開く必要がある**（PKCE のため）。別の端末で開くと「確認リンクが無効」と表示される。
+別端末でも開けるようにしたい場合は、独自 SMTP を設定した後に、`config.toml` のコメントアウトされた
+`[auth.email.template.confirmation]`（[confirmation.html](../supabase/templates/confirmation.html)）を有効にして `config push` する。
+このテンプレートは `token_hash` 方式のリンクで、アプリの `/auth/confirm` は両方の方式に対応している。
 
 ### SMTP（本番では必須）
 
@@ -87,6 +108,8 @@ Project Settings → Authentication → SMTP Settings で、独自の SMTP（Res
    | `NEXT_PUBLIC_SITE_URL` | 本番の URL（例: `https://bodymenter.example.com`） |
 
    `NEXT_PUBLIC_` で始まる値は**ビルド時に埋め込まれる**。値を変えたら再デプロイする。
+   CLI で追加するときは、anon key は公開前提の値なので `--type config` を指定する
+   （`vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY --environment production --type config --value "<key>" --yes`）。
 3. Deploy。カスタムドメインを使う場合は Settings → Domains で追加し、その URL を手順 3 の Site URL / Redirect URLs と
    `NEXT_PUBLIC_SITE_URL` に反映する。
 
@@ -97,7 +120,7 @@ Preview で登録まで試したい場合は、**別の Supabase プロジェク
 
 ## 5. 公開後の動作確認（手動）
 
-- [ ] `/signup` で登録 → 確認メールが**実際のメールアドレスに届く** → リンクを開くとカレンダーに入る
+- [ ] `/signup` で登録 → 確認メールが**実際のメールアドレスに届く** → **同じブラウザで**リンクを開くとカレンダーに入る
 - [ ] 身体計測、ワークアウト（予定 / 実績）、前回メニューのコピーが保存できる
 - [ ] 分析画面のグラフが表示される
 - [ ] 設定画面でカスタム種目の追加・削除、プロフィール保存ができる

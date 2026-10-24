@@ -15,8 +15,9 @@ base.describe("認証", () => {
     await expect(formError(page)).toContainText("正しくありません");
     await expect(page).toHaveURL(/\/login/);
 
+    // 既定のテンプレートのリンクは Supabase の確認を通り、/auth/confirm?code=... に戻ってくる
     const link = await confirmationLink(account.email);
-    expect(link).toContain("/auth/confirm?token_hash=");
+    expect(link).toContain("/auth/v1/verify");
     await page.goto(link);
     await page.waitForURL("/");
     await expect(page.getByRole("heading", { name: "Bodymenter" })).toBeVisible();
@@ -33,11 +34,13 @@ base.describe("認証", () => {
     await expect(page).toHaveURL(/\/signup/);
   });
 
-  base("無効な確認リンクはログイン画面に戻される", async ({ page }) => {
-    await page.goto("/auth/confirm?token_hash=invalid&type=email");
-    await page.waitForURL(/\/login\?error=confirm/);
-    await expect(page.getByText("確認リンクが無効か期限切れです")).toBeVisible();
-  });
+  for (const query of ["code=invalid", "token_hash=invalid&type=email", ""]) {
+    base(`無効な確認リンク (${query || "パラメータなし"}) はログイン画面に戻される`, async ({ page }) => {
+      await page.goto(`/auth/confirm?${query}`);
+      await page.waitForURL(/\/login\?error=confirm/);
+      await expect(page.getByText("確認リンクが無効か期限切れです")).toBeVisible();
+    });
+  }
 
   base("未ログインでは保護ページから /login へ移動する", async ({ page }) => {
     for (const path of ["/", "/analytics", "/settings/exercises", "/workouts/new", "/metrics/new"]) {
