@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { logout } from "../(auth)/actions";
 import {
   dateOf,
@@ -15,6 +16,8 @@ import { DaySummary } from "./day-summary";
 import { MonthCalendar } from "./month-calendar";
 
 async function CalendarContent({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
+  // 「今日」はリクエスト時に決まる値。事前描画中に new Date() を評価しないよう明示する
+  await connection();
   const params = await searchParams;
   const today = todayString();
 

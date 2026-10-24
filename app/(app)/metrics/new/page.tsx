@@ -1,9 +1,12 @@
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { isValidDate, todayString } from "@/lib/date";
 import { createClient } from "@/lib/supabase/server";
 import { MetricForm, type LastMetric } from "../metric-form";
 
 async function MetricContent({ searchParams }: Pick<PageProps<"/metrics/new">, "searchParams">) {
+  // 「今日」はリクエスト時に決まる値。事前描画中に new Date() を評価しないよう明示する
+  await connection();
   const params = await searchParams;
   const dateParam = typeof params.date === "string" ? params.date : undefined;
   const date = isValidDate(dateParam) ? dateParam : todayString();

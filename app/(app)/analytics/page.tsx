@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { z } from "zod";
 import { addDays, todayString } from "@/lib/date";
 import { toDailySeries, type Measured } from "@/lib/series";
@@ -63,6 +64,8 @@ function Segmented<T extends string>({
 }
 
 async function AnalyticsContent({ searchParams }: Pick<PageProps<"/analytics">, "searchParams">) {
+  // 「今日」はリクエスト時に決まる値。事前描画中に new Date() を評価しないよう明示する
+  await connection();
   const params = await searchParams;
   const today = todayString();
 

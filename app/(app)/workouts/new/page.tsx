@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { z } from "zod";
 import { formatDateLabel, isValidDate, todayString } from "@/lib/date";
 import { loadExercises, loadRecentDoneLogs, loadWorkout, toBlocks } from "../load";
@@ -7,6 +8,8 @@ import type { WorkoutInit } from "../workout-types";
 import { WorkoutForm } from "../workout-form";
 
 async function NewWorkoutContent({ searchParams }: Pick<PageProps<"/workouts/new">, "searchParams">) {
+  // 「今日」はリクエスト時に決まる値。事前描画中に new Date() を評価しないよう明示する
+  await connection();
   const params = await searchParams;
   const dateParam = typeof params.date === "string" ? params.date : undefined;
   const copyParam = typeof params.copy === "string" ? params.copy : undefined;
